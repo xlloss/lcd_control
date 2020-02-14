@@ -1,12 +1,4 @@
 /***************************************************************************
-    copyright            : (C) by 2003-2004 Stefano Barbato
-    email                : stefano@codesink.org
-    website		 : http://codesink.org/eeprog.html
-
-    $Id: eeprog.c,v 1.28 2004/02/29 11:06:41 tat Exp $
- ***************************************************************************/
-
-/***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,15 +14,15 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "lcd_2004a.h"
 #include <time.h>
+#include "lcd_2004a.h"
 
 #define IIC_DEV "/dev/i2c-2"
 
 #define INIT_MASK 0x01
 #define WRITE_INSTR_MASK 0x02
 #define WRITE_DATA_MASK 0x04
-//#define READ_MASK 0x04
+#define READ_MASK 0x08
 #define LCM2004A_ADDR 0x20
 
 static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
@@ -39,16 +31,12 @@ struct lcd lcd_dev;
 #define usage_if(a) do { do_usage_if( a , __LINE__); } while(0);
 void do_usage_if(int b, int line)
 {
-	const static char *eeprog_usage = 
-		"I2C-24C08(256 bytes) Read/Write Program, ONLY FOR TEST!\n"
-		"Base on 'eeprog' by Stefano Barbato (http://codesink.org/eeprog.html)\n"
-		"i.e : i2c -r, i2c-w\r\n"
-		"FriendlyARM Computer Tech. 2009\n"
-		"Modify by Slash. 2016\n"
-		"Modify by Slash. 2018\n";
+	const static char *lcd_usage = "lcd usage";
+
 	if(!b)
 		return;
-	fprintf(stderr, "%s\n[line %d]\n", eeprog_usage, line);
+
+	fprintf(stderr, "%s\n[line %d]\n", lcd_usage, line);
 	exit(1);
 }
 
@@ -63,14 +51,6 @@ void do_die_if(int b, char* msg, int line)
 	exit(1);
 }
 
-
-/* -------------------------
-  P7 P6 P5 P4 P3 P2 P1 P0
- ---------------------------
-  D7 D6 D5 D4 BT E  RW RS
-  --------------------------*/
-
-
 void lcd_write_date(struct lcd *lcd_dev, unsigned char data)
 {
     write_data(lcd_dev, data);
@@ -80,15 +60,15 @@ int lcd_init(struct lcd *lcd_dev)
 {
     lcd_dev->ctl = 0;
     lcd_dev->dat = 0;
-    lcd_backlight(lcd_dev, BL_BIT_EN);
+    lcd_backlight(lcd_dev, LCD_BL_BIT_EN);
 
-    write_4bit(lcd_dev, 0x03);
+    write_4bit(lcd_dev, LCD_CMD_INIT);
     _nanosleep();
     
-    write_4bit(lcd_dev, 0x03);
+    write_4bit(lcd_dev, LCD_CMD_INIT);
     _nanosleep();
     
-    write_4bit(lcd_dev, 0x03);
+    write_4bit(lcd_dev, LCD_CMD_INIT);
     _nanosleep();
 
     lcd_write_date(lcd_dev, 0x02);
@@ -170,16 +150,14 @@ int main(int argc, char** argv)
 
     case WRITE_INSTR_MASK:
         fprintf(stderr, "Writing instruction 0x%x\n", w_cmd);
-        //lcd_dev.ctl = lcd_dev.ctl | (1 << BL_BIT);
-        lcd_backlight(&lcd_dev, BL_BIT_EN);
-        //lcd_dev.ctl = lcd_dev.ctl & ~(1 << RS_BIT);
+        lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
         lcd_rs(&lcd_dev, RS_BIT_INST);
         lcd_write_date(&lcd_dev, w_cmd);
         break;
 
     case WRITE_DATA_MASK:
         fprintf(stderr, "Writing data 0x%x\n", w_cmd);
-        lcd_backlight(&lcd_dev, BL_BIT_EN);
+        lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
         lcd_rs(&lcd_dev, RS_BIT_DATA);
         lcd_write_date(&lcd_dev, w_cmd);
         break;

@@ -1,18 +1,12 @@
 /***************************************************************************
-    copyright            : (C) by 2003-2004 Stefano Barbato
-    email                : stefano@codesink.org
-
-    $Id: 24cXX.c,v 1.5 2004/02/29 11:05:28 tat Exp $
- ***************************************************************************/
-
-/***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.     //    lcd_write_date(lcd_dev, 0x02);                              *
+ *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+ 
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -23,8 +17,15 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
-#include "lcd_2004a.h"
 #include <time.h>
+#include "lcd_2004a.h"
+
+
+/* -------------------------
+  P7 P6 P5 P4 P3 P2 P1 P0
+ ---------------------------
+  D7 D6 D5 D4 BT E  RW RS
+  --------------------------*/
 
 static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 200000000};
 
@@ -148,11 +149,11 @@ static int i2c_write_2b(struct lcd *lcd_dev, __u8 buf[2])
 	/* 
      * we must simulate a plain I2C byte write with SMBus functions
      */
-//	r = i2c_smbus_write_byte_data(lcd_dev->fd, buf[0], buf[1]);
-//	if(r < 0)
-//		fprintf(stderr, "Error i2c_write_2b: %s\n", strerror(errno));
-//
-//	usleep(10000);
+	r = i2c_smbus_write_byte_data(lcd_dev->fd, buf[0], buf[1]);
+	if(r < 0)
+		fprintf(stderr, "Error i2c_write_2b: %s\n", strerror(errno));
+
+	usleep(10000);
 	return r;
 }
 
@@ -164,11 +165,11 @@ static int i2c_write_3b(struct lcd *lcd_dev, __u8 buf[3])
      * we must simulate a plain I2C byte write with SMBus functions
 	 * the __u16 data field will be byte swapped by the SMBus protocol
      */
-//	r = i2c_smbus_write_word_data(e->fd, buf[0], buf[2] << 8 | buf[1]);
-//	if(r < 0)
-//		fprintf(stderr, "Error i2c_write_3b: %s\n", strerror(errno));
-//
-//	usleep(10);
+	r = i2c_smbus_write_word_data(lcd_dev->fd, buf[0], buf[2] << 8 | buf[1]);
+	if(r < 0)
+		fprintf(stderr, "Error i2c_write_3b: %s\n", strerror(errno));
+
+	usleep(10);
 	return r;
 }
 
@@ -218,38 +219,31 @@ int lcd_open(char *dev_name, int addr, int type, struct lcd* lcd_dev)
 
 int lcd_close(struct lcd *lcd_dev)
 {
-//	close(e->fd);
-//	e->fd = -1;
-//	e->dev = 0;
-//	e->type = EEPROM_TYPE_UNKNOWN;
+	close(lcd_dev->fd);
+	lcd_dev->fd = -1;
+	lcd_dev->dev = 0;
 	return 0;
 }
 
 int lcd_read_byte(struct lcd *lcd_dev)
 {
-//	int r;
-//
-//	ioctl(e->fd, BLKFLSBUF); // clear kernel read buffer
-//
-//	r = i2c_smbus_read_byte(lcd_dev->fd);
-//
-//	return r;
-    return 0;
-}
+	int r;
 
-#define BL_BIT 3
-#define BL_BIT_EN 1
-#define BL_BIT_DIS 0
+	ioctl(lcd_dev->fd, BLKFLSBUF); // clear kernel read buffer
+
+	r = i2c_smbus_read_byte(lcd_dev->fd);
+
+	return r;
+}
 
 void lcd_backlight(struct lcd *lcd_dev, unsigned char sel)
 {
-    if (sel == BL_BIT_EN)
-        lcd_dev->ctl = lcd_dev->ctl | (1 << BL_BIT);
+    if (sel == LCD_BL_BIT_EN)
+        lcd_dev->ctl = lcd_dev->ctl | (1 << LCD_BL_BIT);
     else
-        lcd_dev->ctl = lcd_dev->ctl & ~(1 << BL_BIT);
+        lcd_dev->ctl = lcd_dev->ctl & ~(1 << LCD_BL_BIT);
 }
 
-//Instruction_register=0 / Data_register=1
 void lcd_rs(struct lcd *lcd_dev, unsigned char sel)
 {
     if (sel == RS_BIT_INST)
@@ -258,65 +252,40 @@ void lcd_rs(struct lcd *lcd_dev, unsigned char sel)
         lcd_dev->ctl = lcd_dev->ctl | (1 << RS_BIT);
 }
 
-#define RW_BIT 1
-#define RW_BIT_W 0
-#define RW_BIT_R 1
-//Read=1/write=0
 void lcd_rw(struct lcd *lcd_dev, unsigned char sel)
 {
-
-    if (sel == RW_BIT_W)
-        lcd_dev->ctl = lcd_dev->ctl & ~(1 << RW_BIT);
+    if (sel == LCD_RW_BIT_W)
+        lcd_dev->ctl = lcd_dev->ctl & ~(1 << LCD_RW_BIT);
     else
-        lcd_dev->ctl = lcd_dev->ctl | (1 << RW_BIT);
+        lcd_dev->ctl = lcd_dev->ctl | (1 << LCD_RW_BIT);
 }
 
-#define EN_BIT 2
-#define EN_BIT_EN 1
-#define EN_BIT_DIS 0
-
-//Enable=1
 void lcd_enable(struct lcd *lcd_dev, unsigned char sel)
 {
-    if (sel == EN_BIT_EN)
-        lcd_dev->ctl = lcd_dev->ctl | (1 << EN_BIT);
+    if (sel == LCD_EN_BIT_EN)
+        lcd_dev->ctl = lcd_dev->ctl | (1 << LCD_EN_BIT);
     else
-        lcd_dev->ctl = lcd_dev->ctl & ~(1 << EN_BIT);
+        lcd_dev->ctl = lcd_dev->ctl & ~(1 << LCD_EN_BIT);
 }
-
-#define LCD_BUS_4BIT_7_4 4
-#define DATA_HI 0xF0
-#define DATA_LO 0x0F
-#define LCD_BUS_CMD_MASK 0x0F
 
 void write_4bit(struct lcd *lcd_dev, __u8 data)
 {
     unsigned char wb_buf = 0;
 
-    wb_buf = wb_buf | ((data & DATA_LO) << LCD_BUS_4BIT_7_4);
-    lcd_enable(lcd_dev, EN_BIT_EN);
+    wb_buf = wb_buf | ((data & DATA_LO) << LCD_BUS_DATA);
+    lcd_enable(lcd_dev, LCD_EN_BIT_EN);
     wb_buf = wb_buf | lcd_dev->ctl;
     i2c_write_1b(lcd_dev, wb_buf);
     _nanosleep();
     wb_buf = wb_buf & ~(LCD_BUS_CMD_MASK);
-    lcd_enable(lcd_dev, EN_BIT_DIS);
+    lcd_enable(lcd_dev, LCD_EN_BIT_DIS);
     wb_buf = wb_buf | lcd_dev->ctl;
     i2c_write_1b(lcd_dev, wb_buf);
 }
 
 void write_data(struct lcd *lcd_dev, __u8 data)
 {
-    unsigned char wb_buf = 0;
-
-    write_4bit(lcd_dev, (data & DATA_HI) >> LCD_BUS_4BIT_7_4);
+    write_4bit(lcd_dev, (data & DATA_HI) >> LCD_BUS_DATA);
     write_4bit(lcd_dev, data & DATA_LO);
     lcd_dev->dat = data;
-}
-
-void write_ctl(struct lcd *lcd_dev)
-{
-    unsigned char wb_buf = 0;
-
-    wb_buf = wb_buf | lcd_dev->dat | lcd_dev->ctl;
-    i2c_write_1b(lcd_dev, wb_buf);
 }
