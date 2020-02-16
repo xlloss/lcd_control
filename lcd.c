@@ -22,8 +22,9 @@
 #define INIT_MASK 0x01
 #define WRITE_INSTR_MASK 0x02
 #define WRITE_DATA_MASK 0x04
-#define READ_MASK 0x08
+#define READ_DATA_MASK 0x08
 #define LCM2004A_ADDR 0x20
+#define TEST_MASK 0x10
 
 static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
 struct lcd lcd_dev;
@@ -40,21 +41,17 @@ void do_usage_if(int b, int line)
 	exit(1);
 }
 
-
-#define die_if(a, msg) do { do_die_if( a , msg, __LINE__); } while(0);
-void do_die_if(int b, char* msg, int line)
-{
-	if(!b)
-		return;
-	fprintf(stderr, "Error at line %d: %s\n", line, msg);
-	fprintf(stderr, "sysmsg: %s\n", strerror(errno));
-	exit(1);
-}
-
-void lcd_write_date(struct lcd *lcd_dev, unsigned char data)
-{
-    write_data(lcd_dev, data);
-}
+#define LCD_CMD_CLEAR_DISP 0x01
+#define LCD_CMD_RETURN_HOME 0x02
+#define LCD_CMD_ENTRY_SET 0x04
+#define LCD_CMD_DISP_CTRL 0x08
+#define LCD_CMD_CUR_DISP_SHIFT 0x10
+#define LCD_CMD_FUNCTION_SET 0x20
+#define LCD_CMD_SET_CG_ADDR 0x40
+#define LCD_CMD_SET_DD_ADDR 0x80
+//#define LCD_CMD_READ_BF_AC
+//#define LCD_CMD_WRITE_DATA_RAM
+//#define LCD_CMD_READ_DATA_RAM
 
 int lcd_init(struct lcd *lcd_dev)
 {
@@ -71,21 +68,66 @@ int lcd_init(struct lcd *lcd_dev)
     write_4bit(lcd_dev, LCD_CMD_INIT);
     _nanosleep();
 
-    lcd_write_date(lcd_dev, 0x02);
+    lcd_write_date(lcd_dev, LCD_CMD_RETURN_HOME);
     lcd_write_date(lcd_dev, 0x2C);
-    lcd_write_date(lcd_dev, 0x01);
+    lcd_write_date(lcd_dev, LCD_CMD_CLEAR_DISP);
     lcd_write_date(lcd_dev, 0x0F);
     lcd_write_date(lcd_dev, 0x06);
 
     return 0;
 }
 
+void show_key()
+{
+    lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
+    lcd_rw(&lcd_dev, LCD_RW_BIT_W);
+
+    lcd_rs(&lcd_dev, RS_BIT_INST);
+    lcd_write_date(&lcd_dev, 0x02);
+    lcd_write_date(&lcd_dev, 0x01);
+
+    lcd_rs(&lcd_dev, RS_BIT_DATA);
+    lcd_write_date(&lcd_dev, 'K');
+    lcd_write_date(&lcd_dev, 'E');
+    lcd_write_date(&lcd_dev, 'Y');
+    lcd_write_date(&lcd_dev, '0');
+    lcd_write_date(&lcd_dev, ':');
+
+    lcd_rs(&lcd_dev, RS_BIT_INST);
+    lcd_write_date(&lcd_dev, 0xC0);
+    lcd_rs(&lcd_dev, RS_BIT_DATA);
+
+    lcd_write_date(&lcd_dev, 'K');
+    lcd_write_date(&lcd_dev, 'E');
+    lcd_write_date(&lcd_dev, 'Y');
+    lcd_write_date(&lcd_dev, '1');
+    lcd_write_date(&lcd_dev, ':');
+
+    lcd_rs(&lcd_dev, RS_BIT_INST);
+    lcd_write_date(&lcd_dev, 0x94);
+    lcd_rs(&lcd_dev, RS_BIT_DATA);
+
+    lcd_write_date(&lcd_dev, 'K');
+    lcd_write_date(&lcd_dev, 'E');
+    lcd_write_date(&lcd_dev, 'Y');
+    lcd_write_date(&lcd_dev, '2');
+    lcd_write_date(&lcd_dev, ':');
+
+    lcd_rs(&lcd_dev, RS_BIT_INST);
+    lcd_write_date(&lcd_dev, 0xD4);
+    lcd_rs(&lcd_dev, RS_BIT_DATA);
+
+    lcd_write_date(&lcd_dev, 'K');
+    lcd_write_date(&lcd_dev, 'E');
+    lcd_write_date(&lcd_dev, 'Y');
+    lcd_write_date(&lcd_dev, '3');
+    lcd_write_date(&lcd_dev, ':');
+}
+
 int main(int argc, char** argv)
 {
     int option_index = 0;
     int opts;
-    unsigned char data;
-    unsigned char ctl;
     unsigned char w_cmd = 0;
     unsigned char cmd = 0;
 
@@ -93,12 +135,14 @@ int main(int argc, char** argv)
     struct option long_options[] = {
         {"start", no_argument, 0, 's'},
         {"instr", required_argument, 0, 'i'},
-        {"data", required_argument, 0, 'd'},
+        {"write", required_argument, 0, 'w'},
+        {"read", no_argument, 0, 'r'},
+        {"test", no_argument, 0, 't'},
         {0, 0, 0, 0}
     };
 
     while (1) {
-        opts = getopt_long (argc, argv, "si:d:",
+        opts = getopt_long (argc, argv, "si:w:rt",
         long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -114,16 +158,17 @@ int main(int argc, char** argv)
             w_cmd = strtol(optarg, NULL, 16);
             break;
 
-        case 'd':
+        case 'w':
             cmd = cmd | WRITE_DATA_MASK;
             w_cmd = strtol(optarg, NULL, 16);
             break;
 
-//        case 'r':
-//            cmd = cmd | READ_MASK;
-//            break;
+        case 'r':
+            cmd = cmd | READ_DATA_MASK;
+            break;
     
-        case '?':
+        case 't':
+            cmd = cmd | TEST_MASK;
             break;
         default:
                 break;
@@ -152,6 +197,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "Writing instruction 0x%x\n", w_cmd);
         lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
         lcd_rs(&lcd_dev, RS_BIT_INST);
+        lcd_rw(&lcd_dev, LCD_RW_BIT_W);
         lcd_write_date(&lcd_dev, w_cmd);
         break;
 
@@ -159,16 +205,31 @@ int main(int argc, char** argv)
         fprintf(stderr, "Writing data 0x%x\n", w_cmd);
         lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
         lcd_rs(&lcd_dev, RS_BIT_DATA);
+        lcd_rw(&lcd_dev, LCD_RW_BIT_W);
         lcd_write_date(&lcd_dev, w_cmd);
         break;
 
+    case READ_DATA_MASK:
+        printf("READ_DATA_MASK\r\n");
+        lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
+        lcd_rs(&lcd_dev, RS_BIT_DATA);
+        lcd_rw(&lcd_dev, LCD_RW_BIT_R);
+        lcd_write_date(&lcd_dev, 0x01);
+
+        printf("0x%x\r\n", read_data(&lcd_dev));
+        break;
+
+    case TEST_MASK:
+        printf("test\r\n");
+        show_key();
+        break;
+
     default:
-        printf("?\r\n");
         break;
     }
 
+
     lcd_close(&lcd_dev);
 
-	return 0;
+    return 0;
 }
-

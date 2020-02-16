@@ -4,7 +4,7 @@ INSTALL = install
 TARGET = $(lcd_test)
 
 
-lcd_test: lcd.o lcd_2004a.o
+lcd_test: lcd.o lcd_2004a.o i2c_if.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 

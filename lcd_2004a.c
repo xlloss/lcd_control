@@ -1,10 +1,10 @@
 /***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
+ *                                                                       *
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
  ***************************************************************************/
  
 #include <stdio.h>
@@ -19,6 +19,7 @@
 #include <string.h>
 #include <time.h>
 #include "lcd_2004a.h"
+#include "i2c_if.h"
 
 
 /* -------------------------
@@ -27,151 +28,7 @@
   D7 D6 D5 D4 BT E  RW RS
   --------------------------*/
 
-static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 200000000};
-
-static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command, 
-                                     int size, union i2c_smbus_data *data)
-{
-	struct i2c_smbus_ioctl_data args;
-
-	args.read_write = read_write;
-	args.command = command;
-	args.size = size;
-	args.data = data;
-
-	return ioctl(file, I2C_SMBUS, &args);
-}
-
-static inline __s32 i2c_smbus_read_byte(int file)
-{
-	union i2c_smbus_data data;
-
-	if (i2c_smbus_access(file, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &data))
-		return -1;
-	else
-		return 0xFF & data.byte;
-}
-
-static inline __s32 i2c_smbus_write_byte(int file, __u8 value)
-{
-	return i2c_smbus_access(file, I2C_SMBUS_WRITE, value,
-	                        I2C_SMBUS_BYTE, NULL);
-}
-
-static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command, 
-                                              __u8 value)
-{
-	union i2c_smbus_data data;
-	data.byte = value;
-	return i2c_smbus_access(file, I2C_SMBUS_WRITE, command,
-	                        I2C_SMBUS_BYTE_DATA, &data);
-}
-
-static inline __s32 i2c_smbus_read_word_data(int file, __u8 command)
-{
-	union i2c_smbus_data data;
-	if (i2c_smbus_access(file, I2C_SMBUS_READ, command,
-	                     I2C_SMBUS_WORD_DATA, &data))
-		return -1;
-	else
-		return 0xFFFF & data.word;
-}
-
-static inline __s32 i2c_smbus_write_word_data(int file, __u8 command, 
-                                              __u16 value)
-{
-	union i2c_smbus_data data;
-	data.word = value;
-	return i2c_smbus_access(file, I2C_SMBUS_WRITE, command,
-	                        I2C_SMBUS_WORD_DATA, &data);
-}
-
-static inline __s32 i2c_smbus_write_i2c_block_data(int file, __u8 command,
-                                               __u8 length, __u8 *values)
-{
-	union i2c_smbus_data data;
-	int i;
-
-	if (length > 32)
-		length = 32;
-
-	for (i = 1; i <= length; i++)
-		data.block[i] = values[i-1];
-
-	data.block[0] = length;
-
-	return i2c_smbus_access(file, I2C_SMBUS_WRITE, command,
-	                        I2C_SMBUS_I2C_BLOCK_DATA, &data);
-}
-
-/* Returns the number of read bytes */
-static inline __s32 i2c_smbus_block_process_call(int file, __u8 command,
-                                                 __u8 length, __u8 *values)
-{
-	union i2c_smbus_data data;
-	int i;
-
-	if (length > 32)
-		length = 32;
-
-	for (i = 1; i <= length; i++)
-		data.block[i] = values[i-1];
-
-	data.block[0] = length;
-
-	if (i2c_smbus_access(file, I2C_SMBUS_WRITE, command,
-            I2C_SMBUS_BLOCK_PROC_CALL, &data)) {
-		return -1;
-    } else {
-		for (i = 1; i <= data.block[0]; i++)
-			values[i-1] = data.block[i];
-		return data.block[0];
-	}
-}
-
-static int i2c_write_1b(struct lcd *lcd_dev, __u8 buf)
-{
-	int r;
-
-	/* we must simulate a plain I2C byte write with SMBus functions */
-    //printf("%s buf 0x%x\r\n", __func__, buf);
-	r = i2c_smbus_write_byte(lcd_dev->fd, buf);
-	if(r < 0)
-		fprintf(stderr, "Error i2c_write_1b: %s\n", strerror(errno));
-
-	usleep(5);
-	return r;
-}
-
-static int i2c_write_2b(struct lcd *lcd_dev, __u8 buf[2])
-{
-	int r;
-	/* 
-     * we must simulate a plain I2C byte write with SMBus functions
-     */
-	r = i2c_smbus_write_byte_data(lcd_dev->fd, buf[0], buf[1]);
-	if(r < 0)
-		fprintf(stderr, "Error i2c_write_2b: %s\n", strerror(errno));
-
-	usleep(10000);
-	return r;
-}
-
-static int i2c_write_3b(struct lcd *lcd_dev, __u8 buf[3])
-{
-	int r;
-
-	/* 
-     * we must simulate a plain I2C byte write with SMBus functions
-	 * the __u16 data field will be byte swapped by the SMBus protocol
-     */
-	r = i2c_smbus_write_word_data(lcd_dev->fd, buf[0], buf[2] << 8 | buf[1]);
-	if(r < 0)
-		fprintf(stderr, "Error i2c_write_3b: %s\n", strerror(errno));
-
-	usleep(10);
-	return r;
-}
+static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 5000000};
 
 
 #define CHECK_I2C_FUNC(var, label) \
@@ -225,16 +82,7 @@ int lcd_close(struct lcd *lcd_dev)
 	return 0;
 }
 
-int lcd_read_byte(struct lcd *lcd_dev)
-{
-	int r;
 
-	ioctl(lcd_dev->fd, BLKFLSBUF); // clear kernel read buffer
-
-	r = i2c_smbus_read_byte(lcd_dev->fd);
-
-	return r;
-}
 
 void lcd_backlight(struct lcd *lcd_dev, unsigned char sel)
 {
@@ -252,6 +100,7 @@ void lcd_rs(struct lcd *lcd_dev, unsigned char sel)
         lcd_dev->ctl = lcd_dev->ctl | (1 << RS_BIT);
 }
 
+
 void lcd_rw(struct lcd *lcd_dev, unsigned char sel)
 {
     if (sel == LCD_RW_BIT_W)
@@ -268,7 +117,7 @@ void lcd_enable(struct lcd *lcd_dev, unsigned char sel)
         lcd_dev->ctl = lcd_dev->ctl & ~(1 << LCD_EN_BIT);
 }
 
-void write_4bit(struct lcd *lcd_dev, __u8 data)
+void write_4bit(struct lcd *lcd_dev, unsigned char data)
 {
     unsigned char wb_buf = 0;
 
@@ -283,9 +132,30 @@ void write_4bit(struct lcd *lcd_dev, __u8 data)
     i2c_write_1b(lcd_dev, wb_buf);
 }
 
-void write_data(struct lcd *lcd_dev, __u8 data)
+void write_data(struct lcd *lcd_dev, unsigned char data)
 {
     write_4bit(lcd_dev, (data & DATA_HI) >> LCD_BUS_DATA);
     write_4bit(lcd_dev, data & DATA_LO);
     lcd_dev->dat = data;
+}
+
+unsigned char read_data(struct lcd *lcd_dev)
+{
+    int r;
+
+    // clear kernel read buffer
+    ioctl(lcd_dev->fd, BLKFLSBUF);
+    r = i2c_smbus_read_byte(lcd_dev->fd);
+    return r;
+}
+
+
+unsigned char lcd_read_date(struct lcd *lcd_dev, unsigned char data)
+{
+    return read_data(lcd_dev);
+}
+
+void lcd_write_date(struct lcd *lcd_dev, unsigned char data)
+{
+    write_data(lcd_dev, data);
 }

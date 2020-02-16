@@ -1,13 +1,13 @@
-/***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
-#include <linux/i2c-dev.h>
-#include <linux/i2c.h>
+/*************************************************************************
+ *                                                                       *
+ * This program is free software; you can redistribute it and/or modify  *
+ * it under the terms of the GNU General Public License as published by  *
+ * the Free Software Foundation; either version 2 of the License, or     *
+ * (at your option) any later version.                                   *
+ *                                                                       *
+ *************************************************************************/
+#ifndef _LCD_2004A_H
+#define _LCD_2004A_H
 
 #define LCD_BUS_UNKNOWN 0
 #define LCD_BUS_4BIT_ADDR 0x1
@@ -38,8 +38,8 @@ struct lcd
 int lcd_open(char *dev_fqn, int addr, int type, struct lcd*);
 int lcd_close(struct lcd *lcd_dev);
 int lcd_read_byte(struct lcd *lcd_dev);
-void write_4bit(struct lcd *lcd_dev, __u8 data);
-void write_data(struct lcd *lcd_dev, __u8 data);
+void write_4bit(struct lcd *lcd_dev, unsigned char data);
+void write_data(struct lcd *lcd_dev, unsigned char data);
 void write_ctl(struct lcd *lcd_dev);
 
 #define RS_BIT 0
@@ -67,3 +67,7 @@ void lcd_enable(struct lcd *lcd_dev, unsigned char sel);
 #define LCD_RW_BIT_R 1
 void lcd_rw(struct lcd *lcd_dev, unsigned char sel);
 
+void lcd_write_date(struct lcd *lcd_dev, unsigned char data);
+void write_data(struct lcd *lcd_dev, unsigned char data);
+unsigned char read_data(struct lcd *lcd_dev);
+#endif
