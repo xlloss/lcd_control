@@ -26,21 +26,6 @@
 #define LCM2004A_ADDR 0x20
 #define TEST_MASK 0x10
 
-static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
-struct lcd lcd_dev;
-
-#define usage_if(a) do { do_usage_if( a , __LINE__); } while(0);
-void do_usage_if(int b, int line)
-{
-	const static char *lcd_usage = "lcd usage";
-
-	if(!b)
-		return;
-
-	fprintf(stderr, "%s\n[line %d]\n", lcd_usage, line);
-	exit(1);
-}
-
 #define LCD_CMD_CLEAR_DISP 0x01
 #define LCD_CMD_RETURN_HOME 0x02
 #define LCD_CMD_ENTRY_SET 0x04
@@ -64,20 +49,35 @@ void do_usage_if(int b, int line)
 #define BUS_TYPE_8BIT (1 << BUS_TYPE)
 
 #define DISPLAT_TYPE 3
-#define DISPLAT_LINE_2 (1 << DISPLAT_TYPE)
+#define DISPLAT_2_LINE (1 << DISPLAT_TYPE)
 #define CHAR_TYPE 2
 #define CHAR_5X10_TYPE (1 << CHAR_TYPE)
 
 #define LCD_CMD_SET_CG_ADDR 0x40
-#define LCD_CMD_SET_DD_ADDR (x) ((0x80 & ~0x7F) | x)
-#define DISP_LOCATE_1ST (LCD_CMD_SET_DD_ADDR(0x0))
-#define DISP_LOCATE_2SED (LCD_CMD_SET_DD_ADDR(0x40))
-#define DISP_LOCATE_3TH (LCD_CMD_SET_DD_ADDR(0x14))
-#define DISP_LOCATE_4TH (LCD_CMD_SET_DD_ADDR(0x54))
+#define DISP_LOCATE_1ST ((0x80 & ~0x7F) | 0x0)
+#define DISP_LOCATE_2SED ((0x80 & ~0x7F) | 0x40)
+#define DISP_LOCATE_3TH ((0x80 & ~0x7F) | 0x14)
+#define DISP_LOCATE_4TH ((0x80 & ~0x7F) | 0x54)
 
 //#define LCD_CMD_READ_BF_AC
 //#define LCD_CMD_WRITE_DATA_RAM
 //#define LCD_CMD_READ_DATA_RAM
+
+
+static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
+struct lcd lcd_dev;
+
+#define usage_if(a) do { do_usage_if( a , __LINE__); } while(0);
+void do_usage_if(int b, int line)
+{
+	const static char *lcd_usage = "lcd usage";
+
+	if(!b)
+		return;
+
+	fprintf(stderr, "%s\n[line %d]\n", lcd_usage, line);
+	exit(1);
+}
 
 int lcd_init(struct lcd *lcd_dev)
 {
@@ -97,7 +97,7 @@ int lcd_init(struct lcd *lcd_dev)
     lcd_write_date(lcd_dev, LCD_CMD_RETURN_HOME);
 
     lcd_write_date(lcd_dev,
-        LCD_CMD_FUNCTION_SET & ~(BUS_TYPE_8BIT) |
+        (LCD_CMD_FUNCTION_SET & ~(BUS_TYPE_8BIT)) |
         DISPLAT_2_LINE |
         CHAR_5X10_TYPE);
 
