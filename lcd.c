@@ -44,11 +44,37 @@ void do_usage_if(int b, int line)
 #define LCD_CMD_CLEAR_DISP 0x01
 #define LCD_CMD_RETURN_HOME 0x02
 #define LCD_CMD_ENTRY_SET 0x04
+#define DISPLAY_SHIFT 0
+#define DDRAM_I_D 1
+
 #define LCD_CMD_DISP_CTRL 0x08
+#define DISPLAY_ON_OFF 2
+#define DISPLAY_ON (1 << DISPLAY_ON_OFF)
+#define CURSOR_DISPLAY 1
+#define CURSOR_ON (1 << CURSOR_DISPLAY)
+#define CURSOR_BLINK 0
+#define CURSOR_BLINK_ON (1 << CURSOR_BLINK)
+
 #define LCD_CMD_CUR_DISP_SHIFT 0x10
+#define CURSOR_DISPLAY_SHIFT 3
+#define SHIFT_RIGHT_LEFT 2
+
 #define LCD_CMD_FUNCTION_SET 0x20
+#define BUS_TYPE 4
+#define BUS_TYPE_8BIT (1 << BUS_TYPE)
+
+#define DISPLAT_TYPE 3
+#define DISPLAT_LINE_2 (1 << DISPLAT_TYPE)
+#define CHAR_TYPE 2
+#define CHAR_5X10_TYPE (1 << CHAR_TYPE)
+
 #define LCD_CMD_SET_CG_ADDR 0x40
-#define LCD_CMD_SET_DD_ADDR 0x80
+#define LCD_CMD_SET_DD_ADDR (x) ((0x80 & ~0x7F) | x)
+#define DISP_LOCATE_1ST (LCD_CMD_SET_DD_ADDR(0x0))
+#define DISP_LOCATE_2SED (LCD_CMD_SET_DD_ADDR(0x40))
+#define DISP_LOCATE_3TH (LCD_CMD_SET_DD_ADDR(0x14))
+#define DISP_LOCATE_4TH (LCD_CMD_SET_DD_ADDR(0x54))
+
 //#define LCD_CMD_READ_BF_AC
 //#define LCD_CMD_WRITE_DATA_RAM
 //#define LCD_CMD_READ_DATA_RAM
@@ -69,9 +95,19 @@ int lcd_init(struct lcd *lcd_dev)
     _nanosleep();
 
     lcd_write_date(lcd_dev, LCD_CMD_RETURN_HOME);
-    lcd_write_date(lcd_dev, 0x2C);
+
+    lcd_write_date(lcd_dev,
+        LCD_CMD_FUNCTION_SET & ~(BUS_TYPE_8BIT) |
+        DISPLAT_2_LINE |
+        CHAR_5X10_TYPE);
+
     lcd_write_date(lcd_dev, LCD_CMD_CLEAR_DISP);
-    lcd_write_date(lcd_dev, 0x0F);
+
+    lcd_write_date(lcd_dev, LCD_CMD_DISP_CTRL |
+        DISPLAY_ON |
+        CURSOR_ON |
+        CURSOR_BLINK_ON);
+
     lcd_write_date(lcd_dev, 0x06);
 
     return 0;
@@ -83,8 +119,8 @@ void show_key()
     lcd_rw(&lcd_dev, LCD_RW_BIT_W);
 
     lcd_rs(&lcd_dev, RS_BIT_INST);
-    lcd_write_date(&lcd_dev, 0x02);
-    lcd_write_date(&lcd_dev, 0x01);
+    lcd_write_date(&lcd_dev, LCD_CMD_RETURN_HOME);
+    lcd_write_date(&lcd_dev, LCD_CMD_CLEAR_DISP);
 
     lcd_rs(&lcd_dev, RS_BIT_DATA);
     lcd_write_date(&lcd_dev, 'K');
@@ -94,7 +130,7 @@ void show_key()
     lcd_write_date(&lcd_dev, ':');
 
     lcd_rs(&lcd_dev, RS_BIT_INST);
-    lcd_write_date(&lcd_dev, 0xC0);
+    lcd_write_date(&lcd_dev, DISP_LOCATE_2SED);
     lcd_rs(&lcd_dev, RS_BIT_DATA);
 
     lcd_write_date(&lcd_dev, 'K');
@@ -104,7 +140,7 @@ void show_key()
     lcd_write_date(&lcd_dev, ':');
 
     lcd_rs(&lcd_dev, RS_BIT_INST);
-    lcd_write_date(&lcd_dev, 0x94);
+    lcd_write_date(&lcd_dev, DISP_LOCATE_3TH);
     lcd_rs(&lcd_dev, RS_BIT_DATA);
 
     lcd_write_date(&lcd_dev, 'K');
@@ -114,7 +150,7 @@ void show_key()
     lcd_write_date(&lcd_dev, ':');
 
     lcd_rs(&lcd_dev, RS_BIT_INST);
-    lcd_write_date(&lcd_dev, 0xD4);
+    lcd_write_date(&lcd_dev, DISP_LOCATE_4TH);
     lcd_rs(&lcd_dev, RS_BIT_DATA);
 
     lcd_write_date(&lcd_dev, 'K');
