@@ -26,21 +26,6 @@
 #define LCM2004A_ADDR 0x20
 #define TEST_MASK 0x10
 
-static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
-struct lcd lcd_dev;
-
-#define usage_if(a) do { do_usage_if( a , __LINE__); } while(0);
-void do_usage_if(int b, int line)
-{
-	const static char *lcd_usage = "lcd usage";
-
-	if(!b)
-		return;
-
-	fprintf(stderr, "%s\n[line %d]\n", lcd_usage, line);
-	exit(1);
-}
-
 #define LCD_CMD_CLEAR_DISP 0x01
 #define LCD_CMD_RETURN_HOME 0x02
 #define LCD_CMD_ENTRY_SET 0x04
@@ -76,8 +61,7 @@ void do_usage_if(int b, int line)
 #define SIFT_ENTRY_DISPLAY 1
 
 #define LCD_CMD_SET_CG_ADDR 0x40
-//#define LCD_CMD_SET_DD_ADDR (x) ((0x80 & ~0x7F) | x)
-#define DISP_LOCATE_1ST (0x80 & ~0x7F)
+#define DISP_LOCATE_1ST ((0x80 & ~0x7F) | 0x0)
 #define DISP_LOCATE_2SED ((0x80 & ~0x7F) | 0x40)
 #define DISP_LOCATE_3TH ((0x80 & ~0x7F) | 0x14)
 #define DISP_LOCATE_4TH ((0x80 & ~0x7F) | 0x54)
@@ -85,6 +69,22 @@ void do_usage_if(int b, int line)
 //#define LCD_CMD_READ_BF_AC
 //#define LCD_CMD_WRITE_DATA_RAM
 //#define LCD_CMD_READ_DATA_RAM
+
+
+static struct timespec sleep_timespec = {.tv_sec = 0, .tv_nsec = 20000000};
+struct lcd lcd_dev;
+
+#define usage_if(a) do { do_usage_if( a , __LINE__); } while(0);
+void do_usage_if(int b, int line)
+{
+	const static char *lcd_usage = "lcd usage";
+
+	if(!b)
+		return;
+
+	fprintf(stderr, "%s\n[line %d]\n", lcd_usage, line);
+	exit(1);
+}
 
 int lcd_init(struct lcd *lcd_dev)
 {
