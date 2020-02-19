@@ -1,5 +1,5 @@
 #ifndef _I2C_IF_H
-#define _I2C_IF_H 
+#define _I2C_IF_H
 
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
@@ -7,7 +7,7 @@
 
 int i2c_write_1b(struct lcd *lcd_dev, __u8 buf);
 
-static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command, 
+static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command,
                                      int size, union i2c_smbus_data *data)
 {
 	struct i2c_smbus_ioctl_data args;
@@ -37,7 +37,7 @@ static inline __s32 i2c_smbus_write_byte(int file, __u8 value)
 	                        I2C_SMBUS_BYTE, NULL);
 }
 
-static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command, 
+static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command,
                                               __u8 value)
 {
 	union i2c_smbus_data data;
@@ -56,7 +56,7 @@ static inline __s32 i2c_smbus_read_word_data(int file, __u8 command)
 		return 0xFFFF & data.word;
 }
 
-static inline __s32 i2c_smbus_write_word_data(int file, __u8 command, 
+static inline __s32 i2c_smbus_write_word_data(int file, __u8 command,
                                               __u16 value)
 {
 	union i2c_smbus_data data;

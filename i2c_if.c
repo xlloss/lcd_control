@@ -37,7 +37,7 @@ int i2c_write_1b(struct lcd *lcd_dev, __u8 buf)
 int i2c_write_2b(struct lcd *lcd_dev, __u8 buf[2])
 {
     int r;
-    /* 
+    /*
     * we must simulate a plain I2C byte write with SMBus functions
     */
     r = i2c_smbus_write_byte_data(lcd_dev->fd, buf[0], buf[1]);
@@ -52,7 +52,7 @@ int i2c_write_3b(struct lcd *lcd_dev, __u8 buf[3])
 {
 	int r;
 
-	/* 
+	/*
      * we must simulate a plain I2C byte write with SMBus functions
 	 * the __u16 data field will be byte swapped by the SMBus protocol
      */
