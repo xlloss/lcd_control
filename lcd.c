@@ -121,6 +121,19 @@ int lcd_init(struct lcd *lcd_dev)
     return 0;
 }
 
+void show_char(char c, unsigned char x, unsigned char y)
+{
+    lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
+    lcd_rw(&lcd_dev, LCD_RW_BIT_W);
+
+    //lcd_rs(&lcd_dev, RS_BIT_INST);
+    //lcd_write_date(&lcd_dev, LCD_CMD_RETURN_HOME);
+    //lcd_write_date(&lcd_dev, LCD_CMD_CLEAR_DISP);
+
+    lcd_rs(&lcd_dev, RS_BIT_DATA);
+    lcd_write_date(&lcd_dev, c);
+}
+
 void show_key()
 {
     lcd_backlight(&lcd_dev, LCD_BL_BIT_EN);
